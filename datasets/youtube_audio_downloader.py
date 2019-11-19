@@ -19,10 +19,11 @@ def extract_audio(folder, url_list):
     
     if not os.path.exists(folder):
         os.makedirs(folder)
-    
+        os.makedirs(os.path.join(folder, 'audio'))
+
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': folder + '/' + folder + '-%(id)s.%(ext)s',
+        'outtmpl': folder + '/audio/' + folder + '-%(id)s.%(ext)s',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'wav',
