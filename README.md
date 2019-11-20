@@ -71,39 +71,19 @@ Follow below commands. (explain with `son` dataset)
 
        export GOOGLE_APPLICATION_CREDENTIALS="YOUR-GOOGLE.CREDENTIALS.json"
 
-1. Download speech(or video) and text.
+1. Download speech(or video) from youtube link. Json file has folder name (like "son") and list of youtube video url.
 
-       python3 -m datasets.son.download
+       python3 -m datasets.youtube_audio_downloader --url_type=video --json_filename=videolist.json
 
-2. Segment all audios on silence.
+2. New code : split audio by silence + recognition(By using Aibril STT API). 기존 코드에서 침묵 기준으로 나눈 결과는 많은 수정이 필요했고 (문장의 끝이 제대로 안잘림) 따라서 인식 결과도 좋지 않아 수작업이 필요하다. 그래서 raw audio file을 그래도 인식하여 나온 결과(duration, transcript) 를 토대로 audio file을 잘랐다. (Aibril STT 참고)
 
-       python3 -m audio.silence --audio_pattern "./datasets/son/audio/*.wav" --method=pydub
+       python3 -m recognition.watson --audio_pattern "./datasets/son/audio/*.wav" --method=pydub
 
-3. By using [Google Speech Recognition API](https://cloud.google.com/speech/), we predict sentences for all segmented audios.
-
-       python3 -m recognition.google --audio_pattern "./datasets/son/audio/*.*.wav"
-
-4. By comparing original text and recognised text, save `audio<->text` pair information into `./datasets/son/alignment.json`.
-
-       python3 -m recognition.alignment --recognition_path "./datasets/son/recognition.json" --score_threshold=0.5
-
-5. Finally, generated numpy files which will be used in training.
+3. 위의 2번에서 침묵 기준 split와 인식을 수행하고 audio, text 쌍을 json 파일로 만듦. 아래부터는 현재 수정 중 (191120) Finally, generated numpy files which will be used in training.
 
        python3 -m datasets.generate_data ./datasets/son/alignment.json
 
 Because the automatic generation is extremely naive, the dataset is noisy. However, if you have enough datasets (20+ hours with random initialization or 5+ hours with pretrained model initialization), you can expect an acceptable quality of audio synthesis.
-
-### 2-3. Generate English datasets
-
-1. Download speech dataset at https://keithito.com/LJ-Speech-Dataset/
-
-2. Convert metadata CSV file to json file. (arguments are available for changing preferences)
-		
-		python3 -m datasets.LJSpeech_1_0.prepare
-
-3. Finally, generate numpy files which will be used in training.
-		
-		python3 -m datasets.generate_data ./datasets/LJSpeech_1_0
 		
 
 ### 3. Train a model
