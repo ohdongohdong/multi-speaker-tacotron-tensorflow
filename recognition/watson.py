@@ -15,9 +15,8 @@ def text_recognition(path, config):
     # make text script using STT
 
     # Waston API credential
-
-    username = 'de7ac1ac-3d80-410c-bb26-972ab9737a68'
-    password = 'TEL5C5Ve7Lg3'
+    username = ''
+    password = ''
     
     headers = {'Content-Type': 'audio/wav'}
     baseUrl = 'https://stream.aibril-watson.kr/speech-to-text/api/v1/recognize?model='
