@@ -37,7 +37,6 @@ def text_recognition(path, config):
                 response = requests.post(url, auth=(username,password), data=f, headers=headers).json()
 
             # parsing duration, transcript
-            print(response)
             if len(response) > 0:
                 alternatives = response['results']
                 results = []
