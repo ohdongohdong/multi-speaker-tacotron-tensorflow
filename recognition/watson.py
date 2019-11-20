@@ -5,71 +5,73 @@ import argparse
 import numpy as np
 from glob import glob
 from functools import partial
+from pydub import AudioSegment
 
 from utils import parallel_run, remove_file, backup_file, write_json
 from audio import load_audio, save_audio, resample_audio, get_duration
 
 def text_recognition(path, config):
-    root, ext = os.path.splitext(path)
-    txt_path = root + ".txt"
-
-    # has text script
-    if os.path.exists(txt_path):
-        with open(txt_path) as f:
-            out = json.loads(open(txt_path).read())
-            return out
-
     # hasn't text script
     # make text script using STT
 
     # Waston API credential
 
+    username = 'de7ac1ac-3d80-410c-bb26-972ab9737a68'
+    password = 'TEL5C5Ve7Lg3'
+    
     headers = {'Content-Type': 'audio/wav'}
     baseUrl = 'https://stream.aibril-watson.kr/speech-to-text/api/v1/recognize?model='
     model = "ko-KR_BroadbandModel"
     url = baseUrl + model 
+
+    url += '&timestamps=true'
     
     out = {}
     error_count = 0
 
-    tmp_path = os.path.splitext(path)[0] + ".tmp.wav"
-
     while True:
         try:
-            # audio processing 
-            content = load_audio(
-                    path, pre_silence_length=config.pre_silence_length,
-                    post_silence_length=config.post_silence_length)
 
-            max_duration = config.max_duration - \
-                    config.pre_silence_length - config.post_silence_length
-            audio_duration = get_duration(content)
-
-            if audio_duration >= max_duration:
-                print(" [!] Skip {} because of duration: {} > {}". \
-                        format(path, audio_duration, max_duration))
-                return {}
-
-            content = resample_audio(content, config.sample_rate)
-            save_audio(content, tmp_path, config.sample_rate)
-
-            # STT
-            with open(tmp_path, 'rb') as f:
+            # STT using full audio
+            with open(path, 'rb') as f:
                 response = requests.post(url, auth=(username,password), data=f, headers=headers).json()
-            
+
+            # parsing duration, transcript
+            print(response)
             if len(response) > 0:
                 alternatives = response['results']
-                results = [alternative['alternatives'][0]['transcript'] for alternative in alternatives]
+                results = []
+                for alternative in alternatives:
+                    start = alternative['alternatives'][0]['timestamps'][0][1]
+                    end = alternative['alternatives'][0]['timestamps'][-1][-1]
+                    transcript = alternative['alternatives'][0]['transcript']
+                    print(transcript) 
+                    print('duration : {} ~ {}'.format(start, end))
+                    results.append([transcript, start, end])
+
+            # Split audio and save splited audio
+            txt_outs = {}
+            for idx, (transcript, start, end) in enumerate(results):
+                start *= 1000 # works in milliseconds
+                end *= 1000 # works in milliseconds
+                split_audio = AudioSegment.from_wav(path)
+                split_audio = split_audio[start:end]
+
+                output_path = "{}.{:04d}.{}".format(
+                        path.replace('.wav',''), idx, 'wav')
+
+                split_audio.export(output_path, format='wav')
+
+                out = { output_path: transcript}
+
+                txt_path = output_path.replace('.wav', '.txt')
+                with open(txt_path, 'w') as f:
+                    json.dump(out, f, indent=2, ensure_ascii=False)
                 
-                print(response)                
-                assert len(results) == 1, "More than 1 results: {}".format(results)
-
-                out = { path: "" if len(results) == 0 else results[0]}
-                if not len(results) == 0:
-                    print(path, results[0])
-                break
+                txt_outs.update(out)
             break
-
+        
+        
         except Exception as err:
             raise Exception("OS error: {0}".format(err))
 
@@ -82,10 +84,7 @@ def text_recognition(path, config):
             else:
                 continue
 
-    with open(txt_path, 'w') as f:
-        json.dump(out, f, indent=2, ensure_ascii=False)
-
-    return out
+    return txt_outs
 
 def text_recognition_batch(paths, config):
     paths.sort()
@@ -111,13 +110,14 @@ if __name__ == '__main__':
 
     audio_dir = os.path.dirname(config.audio_pattern)
 
-    for tmp_path in glob(os.path.join(audio_dir, "*.tmp.*")):
-        remove_file(tmp_path)
-
+    # get audio files that have config.audio_pattern type 
     paths = glob(config.audio_pattern)
     paths.sort()
+
+    # STT and split audio using duration by stt results 
     results = text_recognition_batch(paths, config)
 
+    # write json file (audio, text pair)
     base_dir = os.path.dirname(audio_dir)
     recognition_path = \
             os.path.join(base_dir, config.recognition_filename)
