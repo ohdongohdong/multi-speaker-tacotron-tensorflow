@@ -23,8 +23,6 @@ def text_recognition(path, config):
     # make text script using STT
 
     # Waston API credential
-    username = 'de7ac1ac-3d80-410c-bb26-972ab9737a68'
-    password = 'TEL5C5Ve7Lg3'
 
     headers = {'Content-Type': 'audio/wav'}
     baseUrl = 'https://stream.aibril-watson.kr/speech-to-text/api/v1/recognize?model='
@@ -63,7 +61,8 @@ def text_recognition(path, config):
                 alternatives = response['results']
                 results = [alternative['alternatives'][0]['transcript'] for alternative in alternatives]
                 
-                #assert len(results) == 1, "More than 1 results: {}".format(results)
+                print(response)                
+                assert len(results) == 1, "More than 1 results: {}".format(results)
 
                 out = { path: "" if len(results) == 0 else results[0]}
                 if not len(results) == 0:

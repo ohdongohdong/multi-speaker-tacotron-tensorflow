@@ -82,8 +82,8 @@ def read_audio(audio_path):
 
 def split_on_silence_with_pydub(
         audio_path, skip_idx=0, out_ext="wav",
-        silence_thresh=-40, min_silence_len=400,
-        silence_chunk_len=100, keep_silence=100):
+        silence_thresh=-40, min_silence_len=800,
+        silence_chunk_len=400, keep_silence=100):
 
     filename = os.path.basename(audio_path).split('.', 1)[0]
     in_ext = audio_path.rsplit(".")[1]
